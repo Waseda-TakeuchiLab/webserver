@@ -1,0 +1,60 @@
+# Copyright (c) 2022 Shuhei Nitta. All rights reserved.
+version: "3.8"
+
+services:
+  pomp-probe:
+    build:
+      context: ./pomp_probe
+      args:
+        - VERSION=v0.0.0
+        - HTTP_PROXY=$HTTP_PROXY
+        - HTTPS_PROXY=$HTTPS_PROXY
+        - http_proxy=$HTTP_PROXY
+        - https_proxy=$HTTPS_PROXY
+    env_file:
+      - docker-compose.env
+    restart: always
+    volumes:
+      - type: bind
+        source: ./pomp_probe/config.py
+        target: /app/config.py
+        read_only: true
+    working_dir: /app
+    command: gunicorn -c config.py
+
+  photo-luminescence:
+    build:
+      context: ./photo_luminescence
+      args:
+        - VERSION=v0.0.0
+        - HTTP_PROXY=$HTTP_PROXY
+        - HTTPS_PROXY=$HTTPS_PROXY
+        - http_proxy=$HTTP_PROXY
+        - https_proxy=$HTTPS_PROXY
+    env_file:
+      - docker-compose.env
+    restart: always
+    volumes:
+      - type: bind
+        source: ./photo_luminescence/config.py
+        target: /app/config.py
+        read_only: true
+    working_dir: /app
+    command: gunicorn -c config.py
+
+  nginx:
+    image: nginx:1.21
+    depends_on:
+      - pomp-probe
+      - photo-luminescence
+    env_file:
+      - docker-compose.env
+    restart: always
+    volumes:
+      - type: bind
+        source: ./nginx/apps.conf
+        target: /etc/nginx/conf.d/apps.conf
+        read_only: true
+    ports:
+      - "80:80"
+  
